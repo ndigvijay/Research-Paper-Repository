@@ -1,8 +1,11 @@
 CREATE TABLE Researcher (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     Name VARCHAR(100),
-    Email VARCHAR(100),
-    Age INT
+    Email VARCHAR(100)
+);
+
+CREATE TABLE Expertise (
+    ID VARCHAR(255) PRIMARY KEY
 );
 
 CREATE TABLE ResearcherExpertise (
@@ -10,6 +13,7 @@ CREATE TABLE ResearcherExpertise (
     Expertise VARCHAR(255),
     PRIMARY KEY (ID, Expertise),
     FOREIGN KEY (ID) REFERENCES Researcher(ID)
+    -- FOREIGN KEY (Expertise) REFERENCES Expertise(ID)
 );
 
 CREATE TABLE ResearchPaper (
@@ -32,8 +36,7 @@ CREATE TABLE Conference (
     ID INT AUTO_INCREMENT PRIMARY KEY,
     Title VARCHAR(255),
     Date DATE,
-    Location VARCHAR(255),
-    Organiser VARCHAR(100)
+    Location VARCHAR(255)
 );
 
 CREATE TABLE Review (
@@ -42,6 +45,29 @@ CREATE TABLE Review (
     Title VARCHAR(255),
     FOREIGN KEY (Paper) REFERENCES ResearchPaper(ID)
 );
+
+INSERT INTO Expertise (ID)
+VALUES
+    ('Machine Learning'),
+    ('Quantum Physics'),
+    ('Environmental Science'),
+    ('Artificial Intelligence'),
+    ('Biomedical Engineering'),
+    ('Cultural Anthropology'),
+    ('Climate Change Policy'),
+    ('Astrophysics'),
+    ('Bioinformatics'),
+    ('Linguistic Analysis'),
+    ('Materials Science'),
+    ('Epidemiology'),
+    ('Urban Planning'),
+    ('Renewable Energy Technology'),
+    ('Game Theory'),
+    ('Cognitive Neuroscience'),
+    ('Political Economy'),
+    ('Organic Chemistry'),
+    ('Social Psychology'),
+    ('Cybersecurity');
 
 
 /*INSERT INTO Researcher (Name, Email, Age)
@@ -57,28 +83,6 @@ VALUES
     -- ('James Anderson', 'james.anderson@example.com', 34),
     -- ('Ella Martinez', 'ella.martinez@example.com', 27);
 
-INSERT INTO ResearcherExpertise (ID, Expertise)
-VALUES
-    (1, 'Machine Learning'),
-    (1, 'Computer Vision'),
-    (2, 'Natural Language Processing'),
-    (2, 'Deep Learning'),
-    (3, 'Data Science'),
-    (3, 'Statistics'),
-    (4, 'Computer Vision'),
-    (4, 'Robotics'),
-    (5, 'Cybersecurity'),
-    (5, 'Network Security');
-    -- (6, 'AI'),
-    -- (6, 'Quantum Computing'),
-    -- (7, 'Bioinformatics'),
-    -- (7, 'Genomics'),
-    -- (8, 'Blockchain'),
-    -- (8, 'Cryptocurrency'),
-    -- (9, 'Machine Learning'),
-    -- (9, 'Data Mining'),
-    -- (10, 'Data Science'),
-    -- (10, 'Statistics');
 
 INSERT INTO ResearchPaper (Title, PublicationDate, CitationCount, Conference)
 VALUES

@@ -3,79 +3,84 @@ import streamlit as st
 import pandas as pd
 from streamlit_extras.switch_page_button import switch_page
 from streamlit_extras.add_vertical_space import add_vertical_space
+from MySQL_Connection import *
 
 # st.sidebar.write(st.session_state)
-
-conn = mysql.connector.connect(
-    host="localhost", user="nishanthdmello", passwd="nishanth", database="rpr"
-)
+conn=connect_to_mysql()
 sql = conn.cursor()
 
 st.title("List of all Researchers")
-add_vertical_space(2)
 
-sql.execute("select distinct Expertise from ResearcherExpertise;")
-data = sql.fetchall()
 all_expertise = []
+sql.execute("select * from Expertise;")
+data = sql.fetchall()
 for i in data:
     all_expertise.append(i[0])
 
-if "add_click" not in st.session_state:
-    st.session_state.add_click = False
+add_state("r_add_click")
+add_state("r_edit_click")
+add_state("logged_in")
 if "r_id" not in st.session_state:
     st.session_state.r_id = "NULL"
-if "edit_click" not in st.session_state:
-    st.session_state.edit_click = False
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
 
 
-def add_click():
-    st.session_state.edit_click = False
-    st.session_state.add_click = True
+def r_add_click():
+    st.session_state.r_edit_click = False
+    st.session_state.r_id = "NULL"
+    st.session_state.r_add_click = True
 
 
-if st.session_state.logged_in:
-    st.button("Add", on_click=add_click)
-
-col1, col2, col3 = st.columns(3)
 
 
 def butn_click(id):
-    st.session_state.add_click = False
-    st.session_state.edit_click = False
+    st.session_state.r_add_click = False
+    st.session_state.r_edit_click = False
     st.session_state.r_id = id
 
 
-def edit_click():
-    st.session_state.add_click = False
-    st.session_state.edit_click = True
+def r_edit_click():
+    st.session_state.r_add_click = False
+    st.session_state.r_edit_click = True
 
 
-def r_done(rname, remail, rage, rexper):
-    if st.session_state.add_click:
-        query = f"INSERT INTO Researcher (Name, Email, Age) VALUES ('{rname}', '{remail}', '{rage}');"
+def r_done(rname, remail, rexper):
+    if rname=="" or remail=="" or len(rexper)==0:
+        return
+    if st.session_state.r_add_click:
+        query = f"INSERT INTO Researcher (Name, Email) VALUES ('{rname}', '{remail}');"
         sql.execute(query)
         conn.commit()
 
-        query = (
-            f"select ID from Researcher where Name = '{rname}' and Email='{remail}';"
-        )
+    if st.session_state.r_edit_click:
+        query = f"update Researcher set Name = '{rname}',Email =  '{remail}' where ID = '{st.session_state.r_id}';"
         sql.execute(query)
-        data = sql.fetchall()
-        for i in rexper:
-            query = f"INSERT INTO ResearcherExpertise (ID, Expertise) VALUES ({data[0][0]}, '{i}');"
-            sql.execute(query)
-            conn.commit()
+        conn.commit()
+        
+        
+    query = (
+        f"select ID from Researcher where Name = '{rname}' and Email='{remail}';"
+    )
+    sql.execute(query)
+    data = sql.fetchall()
+    st.session_state.r_id=data[0][0]
+    
+    query=f"delete from ResearcherExpertise where ID = '{st.session_state.r_id}'"
+    sql.execute(query)
+    conn.commit()
 
-    if st.session_state.edit_click:
-        query = f"update Researcher set Name = '{rname}',Email =  '{remail}', Age = '{rage}' where ID = '{st.session_state.r_id}';"
+    for i in rexper:
+        query = f"INSERT INTO ResearcherExpertise (ID, Expertise) VALUES ('{st.session_state.r_id}', '{i}');"
         sql.execute(query)
         conn.commit()
 
-    st.session_state.add_click = False
-    st.session_state.edit_click = False
+    st.session_state.r_add_click = False
+    st.session_state.r_edit_click = False
 
+
+if st.session_state.logged_in:
+    st.button("Add", on_click=r_add_click,use_container_width=True)
+
+col1, col2, col3 = st.columns(3)
 
 sql.execute("select ID, Name from Researcher")
 data = sql.fetchall()
@@ -84,24 +89,23 @@ for i, name in enumerate(data):
     butn_key = f"r_{name[0]}"
     if i % 3 == 0:
         with col1:
-            st.button(name[1], key=butn_key, on_click=butn_click, args=(name[0],))
+            st.button(name[1], key=butn_key, on_click=butn_click, args=(name[0],),use_container_width=True)
     elif i % 3 == 1:
         with col2:
-            st.button(name[1], key=butn_key, on_click=butn_click, args=(name[0],))
+            st.button(name[1], key=butn_key, on_click=butn_click, args=(name[0],),use_container_width=True)
     else:
         with col3:
-            st.button(name[1], key=butn_key, on_click=butn_click, args=(name[0],))
+            st.button(name[1], key=butn_key, on_click=butn_click, args=(name[0],),use_container_width=True)
 
-add_vertical_space(2)
 
 if (
     st.session_state.r_id != "NULL"
-    and not st.session_state.add_click
-    and not st.session_state.edit_click
+    and not st.session_state.r_add_click
+    and not st.session_state.r_edit_click
 ):
     expertise = []
     sql.execute(
-        f"select RE.Expertise from Researcher R LEFT JOIN ResearcherExpertise RE ON R.ID = RE.ID where R.ID = {st.session_state.r_id};"
+        f"SELECT RE.Expertise FROM ResearcherExpertise RE JOIN Researcher R ON R.ID = RE.ID WHERE R.ID = '{st.session_state.r_id}';"
     )
     data = sql.fetchall()
     for i in data:
@@ -109,19 +113,20 @@ if (
 
     papers_dict = {}
     sql.execute(
-        f"SELECT R.ID, R.Name, R.Age, R.Email, RP.ID, RP.Title FROM Researcher R  LEFT JOIN Authorship A ON R.ID = A.Author LEFT JOIN ResearchPaper RP ON A.Paper = RP.ID WHERE R.ID = {st.session_state.r_id};"
+        f"SELECT RP.ID, RP.Title FROM Researcher R LEFT JOIN Authorship A ON R.ID = A.Author LEFT JOIN ResearchPaper RP ON A.Paper = RP.ID WHERE R.ID = '{st.session_state.r_id}';"
     )
     data = sql.fetchall()
     for i in data:
-        papers_dict[i[4]] = i[5]
+        papers_dict[i[0]] = i[1]
+
+    sql.execute(f"SELECT R.ID, R.Name, R.Email FROM Researcher R WHERE R.ID = '{st.session_state.r_id}';")
+    data = sql.fetchall()
+    for i in data:
         r_id = i[0]
         r_name = i[1]
         r_email = i[2]
-        r_age = i[3]
 
-    "Researcher ID : ", r_id
     "Researcher Name : ", r_name
-    "Age : ", r_age
     "Email : ", r_email
     "Expertise : "
     for i in expertise:
@@ -131,44 +136,40 @@ if (
         "Paper ID : ", key, "Paper Title : ", value
 
     if st.session_state.logged_in:
-        st.button("Edit", on_click=edit_click)
+        st.button("Edit", on_click=r_edit_click)
 
-if st.session_state.add_click and not st.session_state.edit_click:
+if st.session_state.r_add_click and not st.session_state.r_edit_click:
     rname = st.text_input("Name")
-    rage = st.number_input("Age", min_value=10, max_value=100)
     remail = st.text_input("Email")
     rexper = st.multiselect("Expertise", all_expertise)
 
-if st.session_state.edit_click and not st.session_state.add_click:
+if st.session_state.r_edit_click and not st.session_state.r_add_click:
     expertise = []
     sql.execute(
-        f"select RE.Expertise from Researcher R LEFT JOIN ResearcherExpertise RE ON R.ID = RE.ID where R.ID = {st.session_state.r_id};"
+        f"SELECT RE.Expertise FROM Researcher R JOIN ResearcherExpertise RE ON R.ID = RE.ID WHERE R.ID = '{st.session_state.r_id}';"
     )
     data = sql.fetchall()
     for i in data:
         expertise.append(i[0])
     sql.execute(
-        f"SELECT R.ID, R.Name, R.Age, R.Email, RP.ID, RP.Title FROM Researcher R  LEFT JOIN Authorship A ON R.ID = A.Author LEFT JOIN ResearchPaper RP ON A.Paper = RP.ID WHERE R.ID = {st.session_state.r_id};"
+        f"SELECT R.ID, R.Name, R.Email FROM Researcher R WHERE R.ID = '{st.session_state.r_id}';"
     )
     data = sql.fetchall()
     for i in data:
         r_id = i[0]
         r_name = i[1]
-        r_age = i[2]
-        r_email = i[3]
+        r_email = i[2]
     rname = st.text_input("Name", r_name)
-    rage = st.text_input("Age", r_age)
     remail = st.text_input("Email", r_email)
-    rexper = st.multiselect("Papers : ", all_expertise, expertise)
+    rexper = st.multiselect("Expertise : ", all_expertise, expertise)
 
-if st.session_state.edit_click or st.session_state.add_click:
+if st.session_state.r_edit_click or st.session_state.r_add_click:
     st.button(
         "Done",
         on_click=r_done,
         args=(
             rname,
             remail,
-            rage,
             rexper,
         ),
     )
