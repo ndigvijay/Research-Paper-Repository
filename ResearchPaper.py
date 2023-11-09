@@ -51,13 +51,58 @@ def p_del():
     conn.commit()
     st.session_state.p_id = "NULL"
 
+# trigger
+def p_delete():
+    query = f"DELETE FROM ResearchPaper WHERE ID = {st.session_state.p_id};"
+    sql.execute(query)
+    conn.commit()
+
+    trigger_query = """
+    CREATE TRIGGER IF NOT EXISTS DeleteRelatedRecords
+    AFTER DELETE ON ResearchPaper
+    BEGIN
+        DELETE FROM Review WHERE Paper = OLD.ID;
+        DELETE FROM Authorship WHERE Paper = OLD.ID;
+    END;
+    """
+    sql.executescript(trigger_query)
+    conn.commit()
 
 def p_add_rev():
     st.session_state.p_add_rev = True
 
+# procedure
+def p_add():
+    query="""DELIMITER //
+    CREATE PROCEDURE AddAuthorship(IN paper_id INT, IN author_id INT)
+    BEGIN
+    INSERT INTO Authorship (Paper, Author) VALUES (paper_id, author_id);
+    END //
+    DELIMITER ;"""
+    sql.execute(query)
+    conn.commit()
+
+
+# function
+def get_count():
+    query="""DELIMITER //
+            CREATE FUNCTION GetTotalCitationCountByResearcher(researcher_id INT) RETURNS INT
+            BEGIN
+                DECLARE total_citation_count INT;
+                SELECT SUM(CitationCount) INTO total_citation_count
+                FROM ResearchPaper
+                WHERE ID IN (SELECT Paper FROM Authorship WHERE Author = researcher_id);
+                RETURN total_citation_count;
+            END;
+            //
+            DELIMITER ;"""
+    sql.execute(query)
+    conn.commit()
+
 
 def p_done_add(title, date, authors):
-    # date = datetime.now().date()
+    if title=="" or date=="" or len(authors)==0:
+        return
     query = f"INSERT INTO ResearchPaper (Title, PublicationDate, CitationCount) VALUES ('{title}', '{date}', 0);"
     sql.execute(query)
     conn.commit()
@@ -74,6 +119,8 @@ def p_done_add(title, date, authors):
 
 
 def p_done_rev(title):
+    if title=="":
+        return
     query = f"INSERT INTO Review (Paper, Title) VALUES ('{st.session_state.p_id}', '{title}');"
     sql.execute(query)
     conn.commit()

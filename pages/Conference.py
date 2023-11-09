@@ -37,6 +37,8 @@ def butn_click(id):
 
 
 def done_click(title, date, loc, papers):
+    if title=="" or date=="" or loc=="" or len(papers)==0:
+        return
     if st.session_state.c_add_click:
         query = f"INSERT INTO Conference (Title, Date, Location) VALUES ('{title}', '{date}', '{loc}');"
         sql.execute(query)
